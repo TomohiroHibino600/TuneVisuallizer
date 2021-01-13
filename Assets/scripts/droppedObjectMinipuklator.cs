@@ -4,10 +4,10 @@ using UnityEngine;
 
 public class droppedObjectMinipuklator : MonoBehaviour {
 
-    public int band;
-    public float StartScale, ScaleMultiplier;
-    public bool UseBuffer = true;
-    public Color MyColor;
+    [SerializeField] int band;
+    [SerializeField] float StartScale, ScaleMultiplier;
+    [SerializeField] bool UseBuffer = true;
+    [SerializeField] Color MyColor;
     private int count = 0;
 
     Material Mat;

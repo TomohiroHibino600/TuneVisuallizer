@@ -3,93 +3,148 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
+/// <summary>
+/// 音楽の周波数ごとの音量と8分割したときの音量を可視化し、補正する
+/// </summary>
 [RequireComponent (typeof(AudioSource))]
 public class Audioviz : MonoBehaviour {
-    public AudioSource AS;
+    /// <summary>
+    /// 音楽のAudioSource
+    /// </summary>
+    [SerializeField] AudioSource AS;
 
+    /// <summary>
+    /// FFTの結果
+    /// </summary>
     public static float[] Samples = new float[512];
-    public static float[] FreqBand = new float[8];
-    public static float[] BandBuff = new float[8];
-    float[] BufferDecrease = new float[8];
 
-    float[] freqbandhighest = new float[8];
+    /// <summary>
+    /// FFTの結果を8分割したときの平均音量
+    /// </summary>
+    public static float[] FreqBand = new float[8];
+
+    /// <summary>
+    /// FFTの結果を8分割したときの平均音量について、増減の速度を調整した音量
+    /// </summary>
+    public static float[] BandBuff = new float[8];
+
+    /// <summary>
+    /// FFTの結果を8分割したときの平均音量について、増減の速度の調整値
+    /// </summary>
+    float[ ] BufferDecrease = new float[8];
+
+    /// <summary>
+    /// FFTの結果を8分割したとき、全ての平均音量のうちの最大音量
+    /// </summary>
+    float[ ] freqbandhighest = new float[8];
+
+    /// <summary>
+    /// 各区分の音量を最大音量で相対化した出力音量値
+    /// </summary>
     public static float[] audioband = new float[8];
+
+    /// <summary>
+    /// 各区分の音量を最大音量で相対化した出力音量値に補正を加えたもの
+    /// </summary>
     public static float[] audiobandBuffer = new float[8];
 
-    // Use this for initialization
     void Start () {
         AS = GetComponent<AudioSource>();
 	}
 	
-	// Update is called once per frame
 	void Update () {
         GetAudioSpec();
         MakeFreqBands();
         MakeBandBuff();
         MakeAudioBands();
     }
+
+    /// <summary>
+    /// 音声データをFFTし、その結果をSamplesに代入
+    /// </summary>
     void GetAudioSpec()
     {
         AS.GetSpectrumData(Samples, 0 ,FFTWindow.Blackman);
     }
+
+    /// <summary>
+    /// Samplesを8分割し、各区分の平均音量を示す配列FreqBandを計算
+    /// </summary>
+    void MakeFreqBands( ) {
+        int count = 0;
+
+        for ( int i = 0; i < 8; i++ ) {
+            //平均音量を毎区分ごとに初期化
+            float Average = 0;
+
+            //1区分を求めるための計算
+            int SampleCounter = ( int )Mathf.Pow( 2, i+1 );
+            if ( i == 7 ) {
+                SampleCounter = +2;
+            }
+
+            /**①countの推移
+                i=0のとき      count → 0~1
+                i=1~6のとき    count → count[i-1] ~ count[i-1] + 2のi+1乗(=各iのSampleCounterの量)
+                i=7のとき      count → 254, 255
+                ※iごとのcountの各区分を数字で表すと、0~1, 2~5, 6~13, 14~29, 30~61, 62~125, 126~253, 254~255　→ 豆：1オクターブの始まりと終わりの周波数は2倍**/
+
+            /**②各区分の平均音量Average = k-最小周波数~最大周波数Σ{Samples[k]*(k+1)} / 最大周波数
+             * 　※MakeAudioBands()で全区分中の最大音量で割ることで、値が相対化され、棒グラフにしたときに高低差が少なくなる
+             */
+            for ( int j = 0; j < SampleCounter; j++ ) {
+                Average += Samples[ count ] * ( count + 1 );
+                count++;
+            }
+            Average /= count;
+
+            FreqBand[ i ] = Average * 10;
+        }
+    }
+
+    /// <summary>
+    /// 音量の増減が実際より滑らかに推移するように補正し、補正後の音量を配列BandBuffに代入
+    /// </summary>
+    void MakeBandBuff( ) {
+        //全区分の補正音量配列BandBuffに関して
+        for ( int i = 0; i < 8; i++ ) {
+            //現フレームの音量Freqband[i]が、1フレーム前に示した補正音量BandBaff[i]より大きい場合
+            if ( FreqBand[ i ] > BandBuff[ i ] ) {
+
+                //補正音量を現在の音量に合わせる
+                BandBuff[ i ] = FreqBand[ i ];
+
+                //音量差分値に0.005fを代入
+                BufferDecrease[ i ] = 0.005f;
+
+            //現フレームの音量Freqband[i]が、1フレーム前に示した補正音量BandBaff[i]より小さい場合
+            } else if ( BandBuff[ i ] > FreqBand[ i ] ) {
+                
+                //補正音量から音量差分値を引く
+                BandBuff[ i ] -= BufferDecrease[ i ];
+
+                //小さくなっている間中ずっと、音量差分値を1.1倍し続けることで、補正音量の値が下がる割合を大きくしていく
+                BufferDecrease[ i ] *= 1.1f;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 全区分の中の最大音量で音量配列と補正音量配列を相対化し、出力配列audiobandとaudiobandBufferを求める
+    /// </summary>
     void MakeAudioBands()
     {
         for (int i = 0; i < 8; i++)
         {
+            //全区分の中の最大音量を求める
             if (FreqBand[i] > freqbandhighest[i])
             {
                 freqbandhighest[i] = FreqBand[i];
             }
 
+            //各区分の音量と補正音量について、全区分中の最大音量で相対化
             audioband[i] = (FreqBand[i] / freqbandhighest[i]);
             audiobandBuffer[i] = (BandBuff[i] / freqbandhighest[i]);
         }
-
-
-    }
-
-    void MakeFreqBands()
-    {
-        int count = 0;
-
-        for (int i = 0; i < 8; i++)
-        {
-            float Average = 0;
-            int SampleCounter = (int)Mathf.Pow(2, i)* 2;
-
-            if (i == 7)
-            {
-                SampleCounter = +2;
-            }
-            for (int j = 0; j < SampleCounter; j++)
-            {
-                Average += Samples[count] * (count + 1);
-                count++;
-            }
-
-            Average /= count;
-
-            FreqBand[i] = Average * 10;
-        }
-    }
-    void MakeBandBuff()
-    {
-        for (int i = 0; i < 8; i++)
-        {
-            if (FreqBand[i] > BandBuff[i])
-            {
-                BandBuff[i] = FreqBand[i];
-                BufferDecrease[i] = 0.005f;
-            }
-            else if (BandBuff[i] > FreqBand[i])
-            {
-                BandBuff[i] -= BufferDecrease[i];
-                BufferDecrease[i] *= 1.1f;
-            }
-        }
-    }
-    public void AudioGetter(AudioSource AudioDropper)
-    {
-        AudioDropper = AS;
     }
 }

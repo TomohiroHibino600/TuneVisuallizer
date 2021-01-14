@@ -7,7 +7,8 @@ using UnityEngine;
 /// 音楽の周波数ごとの音量と8分割したときの音量を可視化し、補正する
 /// </summary>
 [RequireComponent (typeof(AudioSource))]
-public class Audioviz : MonoBehaviour {
+public class AudioViz : MonoBehaviour
+{
     /// <summary>
     /// 音楽のAudioSource
     /// </summary>
@@ -19,34 +20,34 @@ public class Audioviz : MonoBehaviour {
     public static float[] Samples = new float[512];
 
     /// <summary>
-    /// FFTの結果を8分割したときの平均音量
+    /// FFTの結果を8分割したときの各区域の平均音量
     /// </summary>
     public static float[] FreqBand = new float[8];
 
     /// <summary>
-    /// FFTの結果を8分割したときの平均音量について、増減の速度を調整した音量
+    /// FFTの結果を8分割したときの各区域の平均音量について、増減を強調した音量
     /// </summary>
     public static float[] BandBuff = new float[8];
 
     /// <summary>
-    /// FFTの結果を8分割したときの平均音量について、増減の速度の調整値
+    /// FFTの結果を8分割したときの各区域の平均音量について、増減の強調の調整値
     /// </summary>
-    float[ ] BufferDecrease = new float[8];
+    float[ ] bufferDecrease = new float[8];
 
     /// <summary>
-    /// FFTの結果を8分割したとき、全ての平均音量のうちの最大音量
+    /// FFTの結果を8分割したとき、全ての区域の平均音量のうちの最大値
     /// </summary>
-    float[ ] freqbandhighest = new float[8];
+    float[ ] freqBandHighest = new float[8];
 
     /// <summary>
     /// 各区分の音量を最大音量で相対化した出力音量値
     /// </summary>
-    public static float[] audioband = new float[8];
+    public static float[] AudioBand = new float[8];
 
     /// <summary>
     /// 各区分の音量を最大音量で相対化した出力音量値に補正を加えたもの
     /// </summary>
-    public static float[] audiobandBuffer = new float[8];
+    public static float[] AudioBandBuffer = new float[8];
 
     void Start () {
         AS = GetComponent<AudioSource>();
@@ -103,7 +104,7 @@ public class Audioviz : MonoBehaviour {
     }
 
     /// <summary>
-    /// 音量の増減が実際より滑らかに推移するように補正し、補正後の音量を配列BandBuffに代入
+    /// 音量の増減が実際より強調されるように補正し、補正後の音量を配列BandBuffに代入
     /// </summary>
     void MakeBandBuff( ) {
         //全区分の補正音量配列BandBuffに関して
@@ -115,16 +116,16 @@ public class Audioviz : MonoBehaviour {
                 BandBuff[ i ] = FreqBand[ i ];
 
                 //音量差分値に0.005fを代入
-                BufferDecrease[ i ] = 0.005f;
+                bufferDecrease[ i ] = 0.005f;
 
             //現フレームの音量Freqband[i]が、1フレーム前に示した補正音量BandBaff[i]より小さい場合
             } else if ( BandBuff[ i ] > FreqBand[ i ] ) {
                 
                 //補正音量から音量差分値を引く
-                BandBuff[ i ] -= BufferDecrease[ i ];
+                BandBuff[ i ] -= bufferDecrease[ i ];
 
                 //小さくなっている間中ずっと、音量差分値を1.1倍し続けることで、補正音量の値が下がる割合を大きくしていく
-                BufferDecrease[ i ] *= 1.1f;
+                bufferDecrease[ i ] *= 1.1f;
             }
         }
     }
@@ -137,14 +138,14 @@ public class Audioviz : MonoBehaviour {
         for (int i = 0; i < 8; i++)
         {
             //全区分の中の最大音量を求める
-            if (FreqBand[i] > freqbandhighest[i])
+            if (FreqBand[i] > freqBandHighest[i])
             {
-                freqbandhighest[i] = FreqBand[i];
+                freqBandHighest[i] = FreqBand[i];
             }
 
             //各区分の音量と補正音量について、全区分中の最大音量で相対化
-            audioband[i] = (FreqBand[i] / freqbandhighest[i]);
-            audiobandBuffer[i] = (BandBuff[i] / freqbandhighest[i]);
+            AudioBand[i] = (FreqBand[i] / freqBandHighest[i]);
+            AudioBandBuffer[i] = (BandBuff[i] / freqBandHighest[i]);
         }
     }
 }

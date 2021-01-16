@@ -50,7 +50,7 @@ public class AudioViz : MonoBehaviour
     public static float[] AudioBandBuffer = new float[8];
 
     void Start () {
-        AS = GetComponent<AudioSource>();
+        //AS = GetComponent<AudioSource>();
 	}
 	
 	void Update () {

@@ -5,9 +5,12 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
-    path: Assets/scenes/basic audio visualizer.unity
+  - enabled: 0
+    path: Assets/Scenes/basic audio visualizer.unity
     guid: 0b5a52abd2380ff469c293dd0c64f9ed
+  - enabled: 1
+    path: Assets/Scenes/second.unity
+    guid: 4290609fd774e1349b8a30380a000fd0
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: dfa0d4330ec9163428c43999bb15318b,
       type: 2}
